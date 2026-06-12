@@ -35,3 +35,15 @@ describe('validateSignal signalType', () => {
     expect(result.errors.join(' ')).toMatch(/signalType/);
   });
 });
+
+describe('validateSignal value', () => {
+  it('rejects a non-numeric value', () => {
+    const result = validateSignal({
+      businessId: 1,
+      signalType: 'payment',
+      value: 'NaN',
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/value/);
+  });
+});
