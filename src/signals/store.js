@@ -22,3 +22,13 @@ module.exports.getSignalById = (id) =>
 // Return all signals belonging to a given business id.
 module.exports.getSignalsByBusiness = (businessId) =>
   signals.filter((signal) => signal.businessId === businessId);
+
+// Remove a signal by id; returns true when something was removed.
+module.exports.removeSignal = (id) => {
+  const index = signals.findIndex((signal) => signal.id === id);
+  if (index === -1) {
+    return false;
+  }
+  signals.splice(index, 1);
+  return true;
+};
