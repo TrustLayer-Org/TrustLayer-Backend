@@ -48,3 +48,12 @@ const validateAllowedType = (signal, errors) => {
 };
 
 module.exports.validateAllowedType = validateAllowedType;
+
+// Validate that signal.value is a finite number.
+const validateValue = (signal, errors) => {
+  if (!isFiniteNumber(signal.value)) {
+    errors.push('value must be a finite number');
+  }
+};
+
+module.exports.validateValue = validateValue;
