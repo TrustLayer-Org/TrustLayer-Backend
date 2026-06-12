@@ -18,3 +18,7 @@ module.exports.getAllSignals = () => signals.slice();
 // Find a single signal by its id, or undefined when not present.
 module.exports.getSignalById = (id) =>
   signals.find((signal) => signal.id === id);
+
+// Return all signals belonging to a given business id.
+module.exports.getSignalsByBusiness = (businessId) =>
+  signals.filter((signal) => signal.businessId === businessId);
