@@ -37,3 +37,14 @@ const validateSignalType = (signal, errors) => {
 };
 
 module.exports.validateSignalType = validateSignalType;
+
+// Validate that signal.signalType is one of the allowed types.
+const validateAllowedType = (signal, errors) => {
+  if (!ALLOWED_SIGNAL_TYPES.includes(signal.signalType)) {
+    errors.push(
+      `signalType must be one of: ${ALLOWED_SIGNAL_TYPES.join(', ')}`
+    );
+  }
+};
+
+module.exports.validateAllowedType = validateAllowedType;
