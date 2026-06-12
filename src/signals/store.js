@@ -32,3 +32,9 @@ module.exports.removeSignal = (id) => {
   signals.splice(index, 1);
   return true;
 };
+
+// Reset the store to its initial state. Intended for use in tests.
+module.exports.clearSignals = () => {
+  signals.length = 0;
+  nextId = 1;
+};
