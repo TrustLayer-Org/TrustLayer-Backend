@@ -21,3 +21,8 @@ const weightedTotal = (signals) =>
   }, 0);
 
 module.exports.weightedTotal = weightedTotal;
+
+// Constrain a value to the inclusive score bounds.
+const clamp = (value) => Math.min(SCORE_MAX, Math.max(SCORE_MIN, value));
+
+module.exports.clamp = clamp;
