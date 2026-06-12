@@ -41,4 +41,13 @@ router.get('/signals/:id', (req, res) => {
   return res.json(signal);
 });
 
+// Delete a signal by id.
+router.delete('/signals/:id', (req, res) => {
+  const removed = store.removeSignal(Number(req.params.id));
+  if (!removed) {
+    return res.status(404).json({ error: 'signal not found' });
+  }
+  return res.status(204).end();
+});
+
 module.exports = router;
