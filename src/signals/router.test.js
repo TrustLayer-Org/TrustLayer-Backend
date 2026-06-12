@@ -46,3 +46,17 @@ describe('GET /signals', () => {
     expect(res.body.count).toBe(2);
   });
 });
+
+describe('GET and DELETE /signals/:id', () => {
+  it('handles missing records with 404', async () => {
+    const app = makeApp();
+    const created = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 100 });
+    const { id } = created.body;
+    expect((await request(app).get(`/api/v1/signals/${id}`)).status).toBe(200);
+    expect((await request(app).get('/api/v1/signals/999')).status).toBe(404);
+    expect((await request(app).delete(`/api/v1/signals/${id}`)).status).toBe(204);
+    expect((await request(app).delete(`/api/v1/signals/${id}`)).status).toBe(404);
+  });
+});
