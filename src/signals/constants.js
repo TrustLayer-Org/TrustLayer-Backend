@@ -14,3 +14,10 @@ const SIGNAL_WEIGHTS = {
 };
 
 module.exports.SIGNAL_WEIGHTS = SIGNAL_WEIGHTS;
+
+// Inclusive bounds for a computed trust score.
+const SCORE_MIN = 0;
+const SCORE_MAX = 100;
+
+module.exports.SCORE_MIN = SCORE_MIN;
+module.exports.SCORE_MAX = SCORE_MAX;
