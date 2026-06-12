@@ -28,3 +28,12 @@ const validateBusinessId = (signal, errors) => {
 };
 
 module.exports.validateBusinessId = validateBusinessId;
+
+// Validate that signal.signalType is present as a non-empty string.
+const validateSignalType = (signal, errors) => {
+  if (!isNonEmptyString(signal.signalType)) {
+    errors.push('signalType must be a non-empty string');
+  }
+};
+
+module.exports.validateSignalType = validateSignalType;
