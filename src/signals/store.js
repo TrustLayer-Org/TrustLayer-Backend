@@ -11,3 +11,6 @@ module.exports.addSignal = (signal) => {
   signals.push(record);
   return record;
 };
+
+// Return a shallow copy of all stored signals.
+module.exports.getAllSignals = () => signals.slice();
