@@ -14,3 +14,7 @@ module.exports.addSignal = (signal) => {
 
 // Return a shallow copy of all stored signals.
 module.exports.getAllSignals = () => signals.slice();
+
+// Find a single signal by its id, or undefined when not present.
+module.exports.getSignalById = (id) =>
+  signals.find((signal) => signal.id === id);
