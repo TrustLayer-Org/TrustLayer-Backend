@@ -46,6 +46,19 @@ npm start
 - `GET /api/v1/trust/verify/:businessId` – Trust verification placeholder
 - `GET /api/v1/businesses` – List businesses placeholder
 
+### Trust Signals API
+
+A small in-memory service for recording trust signals and deriving a per-business
+trust score. Signals have a `businessId`, a `signalType`
+(`payment`, `review`, `dispute`, `kyc`), and a numeric `value`. Scores are a
+weighted average of a business's signals, clamped to `0..100`.
+
+- `POST /api/v1/signals` – Create a signal (validated; `400` on bad input)
+- `GET /api/v1/signals` – List signals (`?businessId`, `?limit`, `?offset`)
+- `GET /api/v1/signals/:id` – Fetch a signal (`404` when missing)
+- `DELETE /api/v1/signals/:id` – Remove a signal (`404` when missing)
+- `GET /api/v1/businesses/:id/score` – Computed trust score for a business
+
 ## Contributing
 
 1. Fork the repo and create a branch from `main`.
