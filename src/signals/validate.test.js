@@ -23,3 +23,15 @@ describe('validateSignal businessId', () => {
     expect(result.errors.join(' ')).toMatch(/businessId/);
   });
 });
+
+describe('validateSignal signalType', () => {
+  it('rejects an unknown signalType', () => {
+    const result = validateSignal({
+      businessId: 1,
+      signalType: 'bogus',
+      value: 1,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/signalType/);
+  });
+});
