@@ -3,3 +3,11 @@
 
 const signals = [];
 let nextId = 1;
+
+// Store a signal, assigning it a generated id, and return the stored record.
+module.exports.addSignal = (signal) => {
+  const record = { id: nextId, ...signal };
+  nextId += 1;
+  signals.push(record);
+  return record;
+};
