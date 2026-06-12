@@ -57,3 +57,16 @@ const validateValue = (signal, errors) => {
 };
 
 module.exports.validateValue = validateValue;
+
+// Aggregate all field validators into a single result.
+const validateSignal = (signal) => {
+  const errors = [];
+  const candidate = signal || {};
+  validateBusinessId(candidate, errors);
+  validateSignalType(candidate, errors);
+  validateAllowedType(candidate, errors);
+  validateValue(candidate, errors);
+  return { valid: errors.length === 0, errors };
+};
+
+module.exports.validateSignal = validateSignal;
