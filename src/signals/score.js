@@ -26,3 +26,13 @@ module.exports.weightedTotal = weightedTotal;
 const clamp = (value) => Math.min(SCORE_MAX, Math.max(SCORE_MIN, value));
 
 module.exports.clamp = clamp;
+
+// Average weighted value across signals; SCORE_MIN for an empty collection.
+const computeScore = (signals) => {
+  if (signals.length === 0) {
+    return SCORE_MIN;
+  }
+  return weightedTotal(signals) / signals.length;
+};
+
+module.exports.computeScore = computeScore;
