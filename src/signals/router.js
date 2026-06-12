@@ -17,4 +17,10 @@ router.post('/signals', (req, res) => {
   return res.status(201).json(record);
 });
 
+// List all stored signals.
+router.get('/signals', (req, res) => {
+  const signals = store.getAllSignals();
+  return res.json({ total: signals.length, count: signals.length, signals });
+});
+
 module.exports = router;
