@@ -38,3 +38,6 @@ module.exports.clearSignals = () => {
   signals.length = 0;
   nextId = 1;
 };
+
+// Return the number of stored signals.
+module.exports.countSignals = () => signals.length;
