@@ -50,4 +50,15 @@ router.delete('/signals/:id', (req, res) => {
   return res.status(204).end();
 });
 
+// Compute the trust score for a business from its signals.
+router.get('/businesses/:id/score', (req, res) => {
+  const businessId = Number(req.params.id);
+  const signals = store.getSignalsByBusiness(businessId);
+  return res.json({
+    businessId,
+    score: scoreSignals(signals),
+    signalCount: signals.length,
+  });
+});
+
 module.exports = router;
