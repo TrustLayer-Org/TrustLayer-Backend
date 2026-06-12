@@ -60,3 +60,16 @@ describe('GET and DELETE /signals/:id', () => {
     expect((await request(app).delete(`/api/v1/signals/${id}`)).status).toBe(404);
   });
 });
+
+describe('GET /businesses/:id/score', () => {
+  it('returns a computed trust score for a business', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 7, signalType: 'payment', value: 90 });
+    const res = await request(app).get('/api/v1/businesses/7/score');
+    expect(res.body.businessId).toBe(7);
+    expect(res.body.score).toBe(90);
+    expect(res.body.signalCount).toBe(1);
+  });
+});
