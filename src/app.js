@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const signalsRouter = require('./signals/router');
 
 const app = express();
 app.use(cors());
@@ -25,6 +26,9 @@ app.get('/api/v1/trust/verify/:businessId', (req, res) => {
 app.get('/api/v1/businesses', (req, res) => {
   res.json({ businesses: [] });
 });
+
+// Trust Signals REST API
+app.use('/api/v1', signalsRouter);
 
 if (require.main === module) {
   app.listen(PORT, () => {
