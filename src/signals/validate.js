@@ -19,3 +19,12 @@ const isFiniteNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value);
 
 module.exports.isFiniteNumber = isFiniteNumber;
+
+// Validate signal.businessId; pushes a message into errors when invalid.
+const validateBusinessId = (signal, errors) => {
+  if (!isPositiveInteger(signal.businessId)) {
+    errors.push('businessId must be a positive integer');
+  }
+};
+
+module.exports.validateBusinessId = validateBusinessId;
