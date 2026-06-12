@@ -11,3 +11,15 @@ describe('validateSignal', () => {
     expect(result.errors).toEqual([]);
   });
 });
+
+describe('validateSignal businessId', () => {
+  it('rejects a non-positive businessId', () => {
+    const result = validateSignal({
+      businessId: 0,
+      signalType: 'payment',
+      value: 1,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/businessId/);
+  });
+});
