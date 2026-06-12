@@ -24,7 +24,12 @@ router.get('/signals', (req, res) => {
     const businessId = Number(req.query.businessId);
     signals = signals.filter((signal) => signal.businessId === businessId);
   }
-  return res.json({ total: signals.length, count: signals.length, signals });
+  const total = signals.length;
+  const offset = Number(req.query.offset) || 0;
+  const limit =
+    req.query.limit !== undefined ? Number(req.query.limit) : signals.length;
+  const page = signals.slice(offset, offset + limit);
+  return res.json({ total, count: page.length, signals: page });
 });
 
 module.exports = router;
