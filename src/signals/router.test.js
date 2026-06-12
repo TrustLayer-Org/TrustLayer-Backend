@@ -31,3 +31,18 @@ describe('POST /signals validation', () => {
     expect(Array.isArray(res.body.errors)).toBe(true);
   });
 });
+
+describe('GET /signals', () => {
+  it('lists and paginates signals', async () => {
+    const app = makeApp();
+    for (let i = 0; i < 3; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app)
+        .post('/api/v1/signals')
+        .send({ businessId: 1, signalType: 'payment', value: i });
+    }
+    const res = await request(app).get('/api/v1/signals?limit=2&offset=1');
+    expect(res.body.total).toBe(3);
+    expect(res.body.count).toBe(2);
+  });
+});
