@@ -13,3 +13,9 @@ const isNonEmptyString = (value) =>
   typeof value === 'string' && value.trim().length > 0;
 
 module.exports.isNonEmptyString = isNonEmptyString;
+
+// True when value is a finite number (not NaN or Infinity).
+const isFiniteNumber = (value) =>
+  typeof value === 'number' && Number.isFinite(value);
+
+module.exports.isFiniteNumber = isFiniteNumber;
