@@ -21,3 +21,13 @@ describe('POST /signals', () => {
     expect(res.body.id).toBe(1);
   });
 });
+
+describe('POST /signals validation', () => {
+  it('rejects an invalid body with 400 and errors', async () => {
+    const res = await request(makeApp())
+      .post('/api/v1/signals')
+      .send({ businessId: -1, signalType: 'bogus' });
+    expect(res.status).toBe(400);
+    expect(Array.isArray(res.body.errors)).toBe(true);
+  });
+});
