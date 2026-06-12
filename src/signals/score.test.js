@@ -17,3 +17,11 @@ describe('scoreSignals weighting', () => {
     expect(scoreSignals(signals)).toBe(88);
   });
 });
+
+describe('scoreSignals bounds', () => {
+  it('clamps to the score bounds and handles empty input', () => {
+    expect(scoreSignals([])).toBe(0);
+    expect(scoreSignals([{ signalType: 'payment', value: 1000 }])).toBe(100);
+    expect(scoreSignals([{ signalType: 'dispute', value: 1000 }])).toBe(0);
+  });
+});
