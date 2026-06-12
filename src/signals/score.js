@@ -12,3 +12,12 @@ const rawAverage = (signals) => {
 };
 
 module.exports.rawAverage = rawAverage;
+
+// Sum of each signal value scaled by its type weight (default 1).
+const weightedTotal = (signals) =>
+  signals.reduce((sum, signal) => {
+    const weight = SIGNAL_WEIGHTS[signal.signalType] ?? 1;
+    return sum + signal.value * weight;
+  }, 0);
+
+module.exports.weightedTotal = weightedTotal;
