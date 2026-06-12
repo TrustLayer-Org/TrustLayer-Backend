@@ -36,3 +36,8 @@ const computeScore = (signals) => {
 };
 
 module.exports.computeScore = computeScore;
+
+// Final, bounded, integer trust score for a set of signals.
+const scoreSignals = (signals) => Math.round(clamp(computeScore(signals)));
+
+module.exports.scoreSignals = scoreSignals;
