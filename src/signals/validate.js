@@ -7,3 +7,9 @@ const isPositiveInteger = (value) =>
   Number.isInteger(value) && value > 0;
 
 module.exports.isPositiveInteger = isPositiveInteger;
+
+// True when value is a string with at least one non-whitespace character.
+const isNonEmptyString = (value) =>
+  typeof value === 'string' && value.trim().length > 0;
+
+module.exports.isNonEmptyString = isNonEmptyString;
