@@ -17,9 +17,13 @@ router.post('/signals', (req, res) => {
   return res.status(201).json(record);
 });
 
-// List all stored signals.
+// List stored signals, optionally filtered by businessId.
 router.get('/signals', (req, res) => {
-  const signals = store.getAllSignals();
+  let signals = store.getAllSignals();
+  if (req.query.businessId !== undefined) {
+    const businessId = Number(req.query.businessId);
+    signals = signals.filter((signal) => signal.businessId === businessId);
+  }
   return res.json({ total: signals.length, count: signals.length, signals });
 });
 
