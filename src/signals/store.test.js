@@ -36,3 +36,17 @@ describe('getSignalsByBusiness', () => {
     expect(store.getSignalsByBusiness(2)).toHaveLength(1);
   });
 });
+
+describe('removeSignal and countSignals', () => {
+  it('removes records and reports the count', () => {
+    const created = store.addSignal({
+      businessId: 1,
+      signalType: 'payment',
+      value: 100,
+    });
+    expect(store.countSignals()).toBe(1);
+    expect(store.removeSignal(created.id)).toBe(true);
+    expect(store.removeSignal(created.id)).toBe(false);
+    expect(store.countSignals()).toBe(0);
+  });
+});
