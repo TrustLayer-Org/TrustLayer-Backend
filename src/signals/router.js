@@ -32,4 +32,13 @@ router.get('/signals', (req, res) => {
   return res.json({ total, count: page.length, signals: page });
 });
 
+// Fetch a single signal by id.
+router.get('/signals/:id', (req, res) => {
+  const signal = store.getSignalById(Number(req.params.id));
+  if (!signal) {
+    return res.status(404).json({ error: 'signal not found' });
+  }
+  return res.json(signal);
+});
+
 module.exports = router;
