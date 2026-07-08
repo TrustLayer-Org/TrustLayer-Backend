@@ -3,6 +3,7 @@ const {
   listBusinessIds,
   summarizeBusiness,
   listBusinessSummaries,
+  sortBySummaryScoreDesc,
 } = require('./directory');
 
 beforeEach(() => store.clearSignals());
@@ -55,5 +56,18 @@ describe('listBusinessSummaries', () => {
       { businessId: 1, signalCount: 2, score: 35 },
       { businessId: 2, signalCount: 1, score: 50 },
     ]);
+  });
+});
+
+describe('sortBySummaryScoreDesc', () => {
+  it('orders summaries by score, highest first', () => {
+    const summaries = [
+      { businessId: 1, signalCount: 1, score: 20 },
+      { businessId: 2, signalCount: 1, score: 90 },
+      { businessId: 3, signalCount: 1, score: 50 },
+    ];
+    expect(sortBySummaryScoreDesc(summaries).map((s) => s.businessId)).toEqual(
+      [2, 3, 1]
+    );
   });
 });
