@@ -53,7 +53,10 @@ router.delete('/signals/:id', (req, res) => {
 
 // List a summary (signal count and score) for every known business.
 router.get('/businesses', (req, res) => {
-  const summaries = sortBySummaryScoreDesc(listBusinessSummaries());
+  let summaries = sortBySummaryScoreDesc(listBusinessSummaries());
+  if (req.query.limit !== undefined) {
+    summaries = summaries.slice(0, Number(req.query.limit));
+  }
   return res.json({ businesses: summaries });
 });
 
