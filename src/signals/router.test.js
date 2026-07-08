@@ -91,6 +91,19 @@ describe('GET /businesses', () => {
     const res = await request(app).get('/api/v1/businesses');
     expect(res.body.businesses.map((b) => b.businessId)).toEqual([2, 3, 1]);
   });
+
+  it('limits the number of businesses returned', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 20 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 2, signalType: 'payment', value: 90 });
+    const res = await request(app).get('/api/v1/businesses?limit=1');
+    expect(res.body.businesses).toHaveLength(1);
+    expect(res.body.businesses[0].businessId).toBe(2);
+  });
 });
 
 describe('GET /businesses/:id/score', () => {
