@@ -39,3 +39,9 @@ const listBusinessSummaries = () => {
 };
 
 module.exports.listBusinessSummaries = listBusinessSummaries;
+
+// Sort business summaries by score, highest first.
+const sortBySummaryScoreDesc = (summaries) =>
+  summaries.slice().sort((a, b) => b.score - a.score);
+
+module.exports.sortBySummaryScoreDesc = sortBySummaryScoreDesc;
