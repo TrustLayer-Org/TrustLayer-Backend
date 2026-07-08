@@ -45,7 +45,6 @@ npm start
 
 - `GET /health` – Health check
 - `GET /api/v1/trust/verify/:businessId` – Trust verification placeholder
-- `GET /api/v1/businesses` – List businesses placeholder
 
 ### Trust Signals API
 
@@ -59,6 +58,15 @@ weighted average of a business's signals, clamped to `0..100`.
 - `GET /api/v1/signals/:id` – Fetch a signal (`404` when missing)
 - `DELETE /api/v1/signals/:id` – Remove a signal (`404` when missing)
 - `GET /api/v1/businesses/:id/score` – Computed trust score for a business
+
+### Business Directory API
+
+Derives a directory of businesses directly from stored signals, with no separate
+business registration step:
+
+- `GET /api/v1/businesses` – List every business with stored signals as
+  `{ businessId, signalCount, score }`, sorted by score descending
+  (`?limit` caps the number returned)
 
 ## Contributing
 
