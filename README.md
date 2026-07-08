@@ -5,6 +5,7 @@ Express API for the TrustLayer platform: health checks and placeholder routes fo
 ## What’s in this repo
 
 - **Express app** – `src/app.js` with `/health` and `/api/v1/*` placeholders
+- **Business directory** – `GET /api/v1/businesses` summarizing signal count and score per business
 - **Tests** – Jest + supertest in `src/app.test.js`
 - **CI** – Install, build, and test on push/PR to `main`
 
