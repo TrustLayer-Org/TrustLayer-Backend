@@ -4,6 +4,7 @@ const express = require('express');
 const store = require('./store');
 const { validateSignal } = require('./validate');
 const { scoreSignals } = require('./score');
+const { listBusinessSummaries, sortBySummaryScoreDesc } = require('./directory');
 
 const router = express.Router();
 
@@ -48,6 +49,12 @@ router.delete('/signals/:id', (req, res) => {
     return res.status(404).json({ error: 'signal not found' });
   }
   return res.status(204).end();
+});
+
+// List a summary (signal count and score) for every known business.
+router.get('/businesses', (req, res) => {
+  const summaries = sortBySummaryScoreDesc(listBusinessSummaries());
+  return res.json({ businesses: summaries });
 });
 
 // Compute the trust score for a business from its signals.
