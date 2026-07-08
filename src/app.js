@@ -23,10 +23,6 @@ app.get('/api/v1/trust/verify/:businessId', (req, res) => {
   });
 });
 
-app.get('/api/v1/businesses', (req, res) => {
-  res.json({ businesses: [] });
-});
-
 // Trust Signals REST API
 app.use('/api/v1', signalsRouter);
 
