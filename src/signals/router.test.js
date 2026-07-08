@@ -76,6 +76,21 @@ describe('GET /businesses', () => {
       { businessId: 1, signalCount: 1, score: 30 },
     ]);
   });
+
+  it('sorts businesses by score descending regardless of insertion order', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 20 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 2, signalType: 'payment', value: 90 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'payment', value: 50 });
+    const res = await request(app).get('/api/v1/businesses');
+    expect(res.body.businesses.map((b) => b.businessId)).toEqual([2, 3, 1]);
+  });
 });
 
 describe('GET /businesses/:id/score', () => {
