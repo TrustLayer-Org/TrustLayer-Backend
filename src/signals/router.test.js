@@ -104,6 +104,12 @@ describe('GET /businesses', () => {
     expect(res.body.businesses).toHaveLength(1);
     expect(res.body.businesses[0].businessId).toBe(2);
   });
+
+  it('returns an empty array when no signals are stored', async () => {
+    const res = await request(makeApp()).get('/api/v1/businesses');
+    expect(res.status).toBe(200);
+    expect(res.body.businesses).toEqual([]);
+  });
 });
 
 describe('GET /businesses/:id/score', () => {
