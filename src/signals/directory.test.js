@@ -28,4 +28,12 @@ describe('summarizeBusiness', () => {
       score: 35,
     });
   });
+
+  it('defaults to zero count and score when a business has no signals', () => {
+    expect(summarizeBusiness(9, [])).toEqual({
+      businessId: 9,
+      signalCount: 0,
+      score: 0,
+    });
+  });
 });
