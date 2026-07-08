@@ -1,5 +1,6 @@
 // Business directory derived from stored trust signals.
 
+const store = require('./store');
 const { scoreSignals } = require('./score');
 
 // Return the distinct business ids referenced by a collection of signals.
@@ -28,3 +29,13 @@ const summarizeBusiness = (businessId, signals) => {
 };
 
 module.exports.summarizeBusiness = summarizeBusiness;
+
+// Build a summary for every business with at least one stored signal.
+const listBusinessSummaries = () => {
+  const signals = store.getAllSignals();
+  return listBusinessIds(signals).map((businessId) =>
+    summarizeBusiness(businessId, signals)
+  );
+};
+
+module.exports.listBusinessSummaries = listBusinessSummaries;
