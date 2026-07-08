@@ -1,4 +1,11 @@
-const { listBusinessIds, summarizeBusiness } = require('./directory');
+const store = require('./store');
+const {
+  listBusinessIds,
+  summarizeBusiness,
+  listBusinessSummaries,
+} = require('./directory');
+
+beforeEach(() => store.clearSignals());
 
 describe('listBusinessIds', () => {
   it('returns an empty array for no signals', () => {
@@ -35,5 +42,18 @@ describe('summarizeBusiness', () => {
       signalCount: 0,
       score: 0,
     });
+  });
+});
+
+describe('listBusinessSummaries', () => {
+  it('aggregates a summary for every business with stored signals', () => {
+    store.addSignal({ businessId: 1, signalType: 'payment', value: 30 });
+    store.addSignal({ businessId: 1, signalType: 'payment', value: 40 });
+    store.addSignal({ businessId: 2, signalType: 'payment', value: 50 });
+
+    expect(listBusinessSummaries()).toEqual([
+      { businessId: 1, signalCount: 2, score: 35 },
+      { businessId: 2, signalCount: 1, score: 50 },
+    ]);
   });
 });
