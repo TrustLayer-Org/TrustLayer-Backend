@@ -61,6 +61,23 @@ describe('GET and DELETE /signals/:id', () => {
   });
 });
 
+describe('GET /businesses', () => {
+  it('returns a summary for every business with stored signals', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 30 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 2, signalType: 'payment', value: 50 });
+    const res = await request(app).get('/api/v1/businesses');
+    expect(res.body.businesses).toEqual([
+      { businessId: 2, signalCount: 1, score: 50 },
+      { businessId: 1, signalCount: 1, score: 30 },
+    ]);
+  });
+});
+
 describe('GET /businesses/:id/score', () => {
   it('returns a computed trust score for a business', async () => {
     const app = makeApp();
