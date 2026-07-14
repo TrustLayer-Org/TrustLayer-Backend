@@ -5,6 +5,7 @@ const store = require('./store');
 const { validateSignal } = require('./validate');
 const { scoreSignals } = require('./score');
 const { listBusinessSummaries, sortBySummaryScoreDesc } = require('./directory');
+const { breakdownForBusiness } = require('./breakdown');
 
 const router = express.Router();
 
@@ -58,6 +59,12 @@ router.get('/businesses', (req, res) => {
     summaries = summaries.slice(0, Number(req.query.limit));
   }
   return res.json({ businesses: summaries });
+});
+
+// Per-type signal count breakdown for a business.
+router.get('/businesses/:id/breakdown', (req, res) => {
+  const businessId = Number(req.params.id);
+  return res.json(breakdownForBusiness(businessId));
 });
 
 // Compute the trust score for a business from its signals.
