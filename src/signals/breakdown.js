@@ -19,17 +19,6 @@ const countsByType = (signals) => {
 
 module.exports.countsByType = countsByType;
 
-// Combine a business id with its per-type signal counts.
-const breakdownForBusiness = (businessId) => {
-  const signals = store.getSignalsByBusiness(businessId);
-  return {
-    businessId,
-    counts: countsByType(signals),
-  };
-};
-
-module.exports.breakdownForBusiness = breakdownForBusiness;
-
 // The signal type with the highest count; null when every count is zero.
 const dominantType = (counts) => {
   let best = null;
@@ -42,3 +31,16 @@ const dominantType = (counts) => {
 };
 
 module.exports.dominantType = dominantType;
+
+// Combine a business id with its per-type signal counts.
+const breakdownForBusiness = (businessId) => {
+  const signals = store.getSignalsByBusiness(businessId);
+  const counts = countsByType(signals);
+  return {
+    businessId,
+    counts,
+    dominantType: dominantType(counts),
+  };
+};
+
+module.exports.breakdownForBusiness = breakdownForBusiness;
