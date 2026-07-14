@@ -143,4 +143,16 @@ describe('GET /businesses/:id/breakdown', () => {
     expect(res.body.counts.review).toBe(1);
     expect(res.body.dominantType).toBe('payment');
   });
+
+  it('returns zero counts for a business with no signals', async () => {
+    const res = await request(makeApp()).get('/api/v1/businesses/999/breakdown');
+    expect(res.status).toBe(200);
+    expect(res.body.counts).toEqual({
+      payment: 0,
+      review: 0,
+      dispute: 0,
+      kyc: 0,
+    });
+    expect(res.body.dominantType).toBeNull();
+  });
 });
