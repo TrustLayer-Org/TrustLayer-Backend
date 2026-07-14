@@ -1,0 +1,17 @@
+const { countsByType } = require('./breakdown');
+
+describe('countsByType', () => {
+  it('tallies signals across multiple types', () => {
+    const signals = [
+      { signalType: 'payment' },
+      { signalType: 'payment' },
+      { signalType: 'review' },
+    ];
+    expect(countsByType(signals)).toEqual({
+      payment: 2,
+      review: 1,
+      dispute: 0,
+      kyc: 0,
+    });
+  });
+});
