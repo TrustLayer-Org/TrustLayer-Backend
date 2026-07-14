@@ -19,4 +19,13 @@ describe('countsByType', () => {
     const signals = [{ signalType: 'kyc' }];
     expect(countsByType(signals).dispute).toBe(0);
   });
+
+  it('returns all-zero counts for empty input', () => {
+    expect(countsByType([])).toEqual({
+      payment: 0,
+      review: 0,
+      dispute: 0,
+      kyc: 0,
+    });
+  });
 });
