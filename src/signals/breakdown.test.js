@@ -67,4 +67,10 @@ describe('dominantType', () => {
       dominantType({ payment: 0, review: 0, dispute: 0, kyc: 0 })
     ).toBeNull();
   });
+
+  it('breaks ties by allowed-type order', () => {
+    expect(dominantType({ payment: 2, review: 2, dispute: 0, kyc: 0 })).toBe(
+      'payment'
+    );
+  });
 });
