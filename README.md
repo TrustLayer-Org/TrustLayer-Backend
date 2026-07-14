@@ -69,6 +69,15 @@ business registration step:
   `{ businessId, signalCount, score }`, sorted by score descending
   (`?limit` caps the number returned)
 
+### Signal Type Breakdown API
+
+Shows how a business's signals are distributed across types, without exposing
+the raw signal records:
+
+- `GET /api/v1/businesses/:id/breakdown` – Per-type signal counts
+  (`payment`, `review`, `dispute`, `kyc`) plus the `dominantType`, the type
+  with the highest count (`null` when the business has no signals)
+
 ## Contributing
 
 1. Fork the repo and create a branch from `main`.
