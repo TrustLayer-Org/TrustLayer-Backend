@@ -6,5 +6,6 @@ module.exports = {
   validate: require('./validate'),
   score: require('./score'),
   directory: require('./directory'),
+  breakdown: require('./breakdown'),
   router: require('./router'),
 };
