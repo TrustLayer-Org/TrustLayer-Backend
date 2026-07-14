@@ -1,5 +1,6 @@
 // Per-type signal breakdown for a business.
 
+const store = require('./store');
 const { ALLOWED_SIGNAL_TYPES } = require('./constants');
 
 // Tally signals by type.
@@ -17,3 +18,14 @@ const countsByType = (signals) => {
 };
 
 module.exports.countsByType = countsByType;
+
+// Combine a business id with its per-type signal counts.
+const breakdownForBusiness = (businessId) => {
+  const signals = store.getSignalsByBusiness(businessId);
+  return {
+    businessId,
+    counts: countsByType(signals),
+  };
+};
+
+module.exports.breakdownForBusiness = breakdownForBusiness;
