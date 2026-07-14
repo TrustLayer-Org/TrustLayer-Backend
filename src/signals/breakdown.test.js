@@ -44,4 +44,13 @@ describe('breakdownForBusiness', () => {
     expect(breakdown.counts.payment).toBe(2);
     expect(breakdown.counts.review).toBe(0);
   });
+
+  it('returns zero counts for a business with no signals', () => {
+    const breakdown = breakdownForBusiness(9);
+    expect(breakdown).toEqual({
+      businessId: 9,
+      counts: { payment: 0, review: 0, dispute: 0, kyc: 0 },
+      dominantType: null,
+    });
+  });
 });
