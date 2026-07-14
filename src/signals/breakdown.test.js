@@ -1,4 +1,7 @@
-const { countsByType } = require('./breakdown');
+const store = require('./store');
+const { countsByType, breakdownForBusiness } = require('./breakdown');
+
+beforeEach(() => store.clearSignals());
 
 describe('countsByType', () => {
   it('tallies signals across multiple types', () => {
@@ -27,5 +30,18 @@ describe('countsByType', () => {
       dispute: 0,
       kyc: 0,
     });
+  });
+});
+
+describe('breakdownForBusiness', () => {
+  it('combines the business id with its per-type counts', () => {
+    store.addSignal({ businessId: 1, signalType: 'payment', value: 10 });
+    store.addSignal({ businessId: 1, signalType: 'payment', value: 20 });
+    store.addSignal({ businessId: 2, signalType: 'review', value: 5 });
+
+    const breakdown = breakdownForBusiness(1);
+    expect(breakdown.businessId).toBe(1);
+    expect(breakdown.counts.payment).toBe(2);
+    expect(breakdown.counts.review).toBe(0);
   });
 });
