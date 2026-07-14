@@ -124,3 +124,23 @@ describe('GET /businesses/:id/score', () => {
     expect(res.body.signalCount).toBe(1);
   });
 });
+
+describe('GET /businesses/:id/breakdown', () => {
+  it('returns per-type counts and the dominant type for a business', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'payment', value: 10 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'payment', value: 20 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'review', value: 5 });
+    const res = await request(app).get('/api/v1/businesses/3/breakdown');
+    expect(res.body.businessId).toBe(3);
+    expect(res.body.counts.payment).toBe(2);
+    expect(res.body.counts.review).toBe(1);
+    expect(res.body.dominantType).toBe('payment');
+  });
+});
