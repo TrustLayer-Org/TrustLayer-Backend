@@ -1,5 +1,5 @@
 const store = require('./store');
-const { countsByType, breakdownForBusiness } = require('./breakdown');
+const { countsByType, breakdownForBusiness, dominantType } = require('./breakdown');
 
 beforeEach(() => store.clearSignals());
 
@@ -52,5 +52,13 @@ describe('breakdownForBusiness', () => {
       counts: { payment: 0, review: 0, dispute: 0, kyc: 0 },
       dominantType: null,
     });
+  });
+});
+
+describe('dominantType', () => {
+  it('returns the type with the highest count', () => {
+    expect(
+      dominantType({ payment: 3, review: 5, dispute: 1, kyc: 0 })
+    ).toBe('review');
   });
 });
