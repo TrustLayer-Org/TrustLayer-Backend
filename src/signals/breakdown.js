@@ -29,3 +29,16 @@ const breakdownForBusiness = (businessId) => {
 };
 
 module.exports.breakdownForBusiness = breakdownForBusiness;
+
+// The signal type with the highest count; null when every count is zero.
+const dominantType = (counts) => {
+  let best = null;
+  ALLOWED_SIGNAL_TYPES.forEach((type) => {
+    if (counts[type] > 0 && (best === null || counts[type] > counts[best])) {
+      best = type;
+    }
+  });
+  return best;
+};
+
+module.exports.dominantType = dominantType;
