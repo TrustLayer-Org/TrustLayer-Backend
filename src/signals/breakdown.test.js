@@ -14,4 +14,9 @@ describe('countsByType', () => {
       kyc: 0,
     });
   });
+
+  it('reports zero for a type with no signals', () => {
+    const signals = [{ signalType: 'kyc' }];
+    expect(countsByType(signals).dispute).toBe(0);
+  });
 });
