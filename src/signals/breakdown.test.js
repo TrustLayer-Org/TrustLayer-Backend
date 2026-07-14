@@ -61,4 +61,10 @@ describe('dominantType', () => {
       dominantType({ payment: 3, review: 5, dispute: 1, kyc: 0 })
     ).toBe('review');
   });
+
+  it('returns null when every count is zero', () => {
+    expect(
+      dominantType({ payment: 0, review: 0, dispute: 0, kyc: 0 })
+    ).toBeNull();
+  });
 });
