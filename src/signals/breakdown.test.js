@@ -1,7 +1,32 @@
 const store = require('./store');
 const { countsByType, breakdownForBusiness, dominantType } = require('./breakdown');
+const path = require('path');
+const fs = require('fs');
 
-beforeEach(() => store.clearSignals());
+const testDbPath = path.join(__dirname, 'test-data', 'breakdown-test.db');
+
+beforeEach(() => {
+  // Clean up any existing test database
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+  // Ensure test data directory exists
+  const testDir = path.dirname(testDbPath);
+  if (!fs.existsSync(testDir)) {
+    fs.mkdirSync(testDir, { recursive: true });
+  }
+  // Initialize store with test database
+  store.initialize(testDbPath);
+  store.clearSignals();
+});
+
+afterEach(() => {
+  store.close();
+  // Clean up test database
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+});
 
 describe('countsByType', () => {
   it('tallies signals across multiple types', () => {

@@ -2,6 +2,10 @@ const request = require('supertest');
 const express = require('express');
 const store = require('./store');
 const router = require('./router');
+const path = require('path');
+const fs = require('fs');
+
+const testDbPath = path.join(__dirname, 'test-data', 'router-test.db');
 
 const makeApp = () => {
   const app = express();
@@ -10,7 +14,28 @@ const makeApp = () => {
   return app;
 };
 
-beforeEach(() => store.clearSignals());
+beforeEach(() => {
+  // Clean up any existing test database
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+  // Ensure test data directory exists
+  const testDir = path.dirname(testDbPath);
+  if (!fs.existsSync(testDir)) {
+    fs.mkdirSync(testDir, { recursive: true });
+  }
+  // Initialize store with test database
+  store.initialize(testDbPath);
+  store.clearSignals();
+});
+
+afterEach(() => {
+  store.close();
+  // Clean up test database
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+});
 
 describe('POST /signals', () => {
   it('creates a signal and returns 201', async () => {
