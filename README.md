@@ -60,6 +60,35 @@ weighted average of a business's signals, clamped to `0..100`.
 - `DELETE /api/v1/signals/:id` – Remove a signal (`404` when missing)
 - `GET /api/v1/businesses/:id/score` – Computed trust score for a business
 
+#### Idempotent signal creation
+
+Retries after timeouts or lost responses must not create duplicate signals or
+inflate trust scores twice. `POST /api/v1/signals` therefore accepts an
+optional `Idempotency-Key` HTTP header:
+
+- **First delivery** – the signal is created and the key is committed together
+  with it in one atomic store operation, bound to a canonical SHA-256
+  fingerprint of the request payload (`201`).
+- **Exact retry** (same key + same payload) – returns the ORIGINAL record with
+  `200` and an `Idempotency-Replayed: true` header. No second signal, no
+  change to counts or scores.
+- **Conflicting reuse** (same key + different payload, including a different
+  `businessId`) – deterministic `409`; nothing is mutated and the original
+  binding stays intact.
+- **Invalid requests** (`400` for bad bodies or malformed keys) never reserve
+  or burn the key: fix the payload and resend with the same key.
+- **No key** – legacy behavior; every valid request creates a new signal.
+
+Retention policy: a committed key can be replayed for **24 hours**
+(overridable via `TRUSTLAYER_IDEMPOTENCY_TTL_MS`). After expiry the binding is
+dropped on access and the key becomes reclaimable by a brand-new request —
+late retries past the window are processed as explicitly NEW signals rather
+than ambiguous stale replays.
+
+Note: keys are currently process-local because the underlying store is
+in-memory; durable persistence that also survives restarts is tracked in
+issue #1.
+
 ### Business Directory API
 
 Derives a directory of businesses directly from stored signals, with no separate
