@@ -44,11 +44,16 @@ router.get('/signals/:id', (req, res) => {
 });
 
 // Delete a signal by id.
+// On success, sets audit headers identifying the removed signal and affected
+// business without exposing the signal value in the response body.
 router.delete('/signals/:id', (req, res) => {
   const removed = store.removeSignal(Number(req.params.id));
   if (!removed) {
     return res.status(404).json({ error: 'signal not found' });
   }
+  res.set('X-Deleted-Signal-Id', String(removed.id));
+  res.set('X-Affected-Business-Id', String(removed.businessId));
+  res.set('X-Deletion-Timestamp', new Date().toISOString());
   return res.status(204).end();
 });
 

@@ -156,3 +156,188 @@ describe('GET /businesses/:id/breakdown', () => {
     expect(res.body.dominantType).toBeNull();
   });
 });
+
+describe('deletion derived-state consistency', () => {
+  it('score reflects deletion of one signal', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 80 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 40 });
+
+    // Before delete: score = (80 + 40) / 2 = 60
+    let score = await request(app).get('/api/v1/businesses/1/score');
+    expect(score.body.score).toBe(60);
+    expect(score.body.signalCount).toBe(2);
+
+    await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+
+    // After delete: score = 40 / 1 = 40
+    score = await request(app).get('/api/v1/businesses/1/score');
+    expect(score.body.score).toBe(40);
+    expect(score.body.signalCount).toBe(1);
+  });
+
+  it('directory removes business when all its signals are deleted', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 50 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 2, signalType: 'payment', value: 80 });
+
+    let dir = await request(app).get('/api/v1/businesses');
+    expect(dir.body.businesses).toHaveLength(2);
+
+    await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+
+    dir = await request(app).get('/api/v1/businesses');
+    expect(dir.body.businesses).toHaveLength(1);
+    expect(dir.body.businesses[0].businessId).toBe(2);
+  });
+
+  it('breakdown reflects deletion of a typed signal', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'payment', value: 10 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 3, signalType: 'review', value: 5 });
+
+    let bd = await request(app).get('/api/v1/businesses/3/breakdown');
+    expect(bd.body.counts.payment).toBe(1);
+    expect(bd.body.counts.review).toBe(1);
+
+    await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+
+    bd = await request(app).get('/api/v1/businesses/3/breakdown');
+    expect(bd.body.counts.payment).toBe(0);
+    expect(bd.body.counts.review).toBe(1);
+    expect(bd.body.dominantType).toBe('review');
+  });
+
+  it('all endpoints agree on signal count after delete', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 30 });
+    const r2 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'review', value: 50 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'kyc', value: 70 });
+
+    await request(app).delete(`/api/v1/signals/${r2.body.id}`);
+
+    const score = await request(app).get('/api/v1/businesses/1/score');
+    const dir = await request(app).get('/api/v1/businesses');
+    const bd = await request(app).get('/api/v1/businesses/1/breakdown');
+    const signals = await request(app).get('/api/v1/signals?businessId=1');
+
+    // All four views must agree on the count: 2 remaining signals.
+    expect(score.body.signalCount).toBe(2);
+    expect(dir.body.businesses[0].signalCount).toBe(2);
+    const breakdownTotal = Object.values(bd.body.counts).reduce(
+      (sum, c) => sum + c,
+      0
+    );
+    expect(breakdownTotal).toBe(2);
+    expect(signals.body.total).toBe(2);
+  });
+
+  it('failed delete (404) leaves all derived views unchanged', async () => {
+    const app = makeApp();
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 50 });
+
+    // Snapshot before.
+    const scoreBefore = await request(app).get('/api/v1/businesses/1/score');
+    const dirBefore = await request(app).get('/api/v1/businesses');
+    const bdBefore = await request(app).get('/api/v1/businesses/1/breakdown');
+
+    // Delete a non-existent signal.
+    const del = await request(app).delete('/api/v1/signals/999');
+    expect(del.status).toBe(404);
+
+    // Snapshot after: must be identical.
+    const scoreAfter = await request(app).get('/api/v1/businesses/1/score');
+    const dirAfter = await request(app).get('/api/v1/businesses');
+    const bdAfter = await request(app).get('/api/v1/businesses/1/breakdown');
+
+    expect(scoreAfter.body).toEqual(scoreBefore.body);
+    expect(dirAfter.body).toEqual(dirBefore.body);
+    expect(bdAfter.body).toEqual(bdBefore.body);
+  });
+
+  it('repeated delete returns 404 on second attempt with no state change', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 50 });
+    await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'review', value: 30 });
+
+    const del1 = await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+    expect(del1.status).toBe(204);
+
+    // Snapshot after first delete.
+    const scoreAfterFirst = await request(app).get('/api/v1/businesses/1/score');
+
+    const del2 = await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+    expect(del2.status).toBe(404);
+
+    // Snapshot after second (failed) delete: unchanged.
+    const scoreAfterSecond = await request(app).get('/api/v1/businesses/1/score');
+    expect(scoreAfterSecond.body).toEqual(scoreAfterFirst.body);
+  });
+
+  it('last signal delete: score 0, breakdown all zeros, absent from directory', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 50 });
+
+    await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+
+    const score = await request(app).get('/api/v1/businesses/1/score');
+    expect(score.body.score).toBe(0);
+    expect(score.body.signalCount).toBe(0);
+
+    const bd = await request(app).get('/api/v1/businesses/1/breakdown');
+    expect(bd.body.counts).toEqual({ payment: 0, review: 0, dispute: 0, kyc: 0 });
+    expect(bd.body.dominantType).toBeNull();
+
+    const dir = await request(app).get('/api/v1/businesses');
+    expect(dir.body.businesses).toEqual([]);
+  });
+});
+
+describe('DELETE audit headers', () => {
+  it('sets audit headers on successful delete', async () => {
+    const app = makeApp();
+    const r1 = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 7, signalType: 'kyc', value: 90 });
+
+    const del = await request(app).delete(`/api/v1/signals/${r1.body.id}`);
+    expect(del.status).toBe(204);
+    expect(del.headers['x-deleted-signal-id']).toBe(String(r1.body.id));
+    expect(del.headers['x-affected-business-id']).toBe('7');
+    expect(del.headers['x-deletion-timestamp']).toBeDefined();
+  });
+
+  it('does not set audit headers on failed delete', async () => {
+    const del = await request(makeApp()).delete('/api/v1/signals/999');
+    expect(del.status).toBe(404);
+    expect(del.headers['x-deleted-signal-id']).toBeUndefined();
+    expect(del.headers['x-affected-business-id']).toBeUndefined();
+    expect(del.headers['x-deletion-timestamp']).toBeUndefined();
+  });
+});
