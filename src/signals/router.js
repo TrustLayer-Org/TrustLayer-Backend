@@ -6,11 +6,22 @@ const { validateSignal } = require('./validate');
 const { scoreSignals } = require('./score');
 const { listBusinessSummaries, sortBySummaryScoreDesc } = require('./directory');
 const { breakdownForBusiness } = require('./breakdown');
+const RateLimiter = require('../middleware/rateLimiter');
+const { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX } = require('./constants');
 
 const router = express.Router();
 
+// Rate limiter for mutation routes (POST, DELETE).  failClosed = true means
+// that if the limiter itself errors, the request is rejected (503) rather
+// than silently passing through.  This prevents adversaries from disabling
+// protection by crashing the limiter.
+const writeLimiter = new RateLimiter({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
+});
+
 // Create a new signal after validating the request body.
-router.post('/signals', (req, res) => {
+router.post('/signals', writeLimiter.middleware(true), (req, res) => {
   const { valid, errors } = validateSignal(req.body);
   if (!valid) {
     return res.status(400).json({ errors });
@@ -44,7 +55,7 @@ router.get('/signals/:id', (req, res) => {
 });
 
 // Delete a signal by id.
-router.delete('/signals/:id', (req, res) => {
+router.delete('/signals/:id', writeLimiter.middleware(true), (req, res) => {
   const removed = store.removeSignal(Number(req.params.id));
   if (!removed) {
     return res.status(404).json({ error: 'signal not found' });
@@ -79,3 +90,4 @@ router.get('/businesses/:id/score', (req, res) => {
 });
 
 module.exports = router;
+module.exports.writeLimiter = writeLimiter;

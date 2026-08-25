@@ -42,6 +42,74 @@ npm start
 | `test`   | Run Jest tests                 |
 | `build`  | Verify app module loads        |
 
+## Abuse Protection
+
+### Body Size Limits
+
+All incoming JSON request bodies are capped at **100 KB** by default. Requests
+with a larger payload are rejected with `413 Payload Too Large` before any
+business logic runs.
+
+Configure via the `BODY_SIZE_LIMIT` environment variable:
+
+```bash
+BODY_SIZE_LIMIT=50kb npm start   # stricter
+BODY_SIZE_LIMIT=1mb npm start    # more permissive
+```
+
+Accepts any value understood by the [`bytes`](https://www.npmjs.com/package/bytes)
+library (used internally by Express).
+
+### Rate Limiting
+
+Write routes (`POST /api/v1/signals`, `DELETE /api/v1/signals/:id`) are rate
+limited per client IP. Read routes (`GET ...`) are **not** rate limited.
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Window duration in milliseconds |
+| `RATE_LIMIT_MAX` | `30` | Max requests per window per IP |
+
+#### 429 Response
+
+When the limit is exceeded the response includes safe retry metadata:
+
+```json
+{
+  "error": "Too many requests",
+  "retryAfter": 42,
+  "resetTime": "2026-08-25T12:34:00.000Z"
+}
+```
+
+Headers on **every** response (allowed or blocked):
+
+| Header | Description |
+|---|---|
+| `X-RateLimit-Limit` | Max requests allowed in the window |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp (seconds) when the window resets |
+| `Retry-After` | Seconds until the window resets (only on 429) |
+
+#### Failure Behavior
+
+The rate limiter is fail-safe for mutation routes. If the limiter itself throws
+an error, the request is rejected with `503 Service Unavailable` rather than
+silently passing through. This prevents adversaries from disabling protection
+by crashing the limiter.
+
+#### Trust Proxy
+
+The app sets `trust proxy = 1` so `req.ip` reflects the real client IP when
+behind a load balancer or reverse proxy. Adjust `trust proxy` in `src/app.js`
+if your deployment uses a different number of proxy hops.
+
+#### Actor Identity
+
+Rate limits are keyed by `req.ip`, which is the authenticated client identity
+when behind a trusted proxy. This is not a spoofable header — Express derives
+the IP from the `X-Forwarded-For` chain only when `trust proxy` is enabled.
+
 ## API (current)
 
 - `GET /health` – Health check
@@ -83,6 +151,22 @@ the raw signal records:
 1. Fork the repo and create a branch from `main`.
 2. Install with `npm ci` and run `npm test` and `npm run build`.
 3. Open a pull request to `main`. CI will run build and tests.
+
+## Rollback
+
+Rate limiting and body size limits are purely additive middleware — no schema
+changes, no data migration, no new runtime dependencies. To revert:
+
+1. Remove `src/middleware/rateLimiter.js` and `src/middleware/rateLimiter.test.js`.
+2. Revert `src/signals/router.js` to remove the `writeLimiter` import and
+   middleware from `POST /signals` and `DELETE /signals/:id`.
+3. Revert `src/app.js` to use `express.json()` without a `limit` option and
+   remove `app.set('trust proxy', 1)`.
+4. Optionally revert `src/signals/constants.js` to remove the rate-limit
+   constants.
+
+No environment variable changes are required — the app works with or without
+the `BODY_SIZE_LIMIT`, `RATE_LIMIT_WINDOW_MS`, and `RATE_LIMIT_MAX` variables.
 
 ## License
 

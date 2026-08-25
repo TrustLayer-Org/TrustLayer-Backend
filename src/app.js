@@ -1,10 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const signalsRouter = require('./signals/router');
+const { BODY_SIZE_LIMIT_DEFAULT } = require('./signals/constants');
 
 const app = express();
+
+// Trust the first proxy hop so req.ip reflects the real client behind a
+// load balancer or reverse proxy.  Set to the number of proxy hops in
+// production; the default of 1 is correct for most single-proxy setups.
+app.set('trust proxy', 1);
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: BODY_SIZE_LIMIT_DEFAULT }));
 
 const PORT = process.env.PORT || 3001;
 
