@@ -2,6 +2,7 @@ const request = require('supertest');
 const express = require('express');
 const store = require('./store');
 const router = require('./router');
+const { writeLimiter } = require('./router');
 
 const makeApp = () => {
   const app = express();
@@ -10,7 +11,18 @@ const makeApp = () => {
   return app;
 };
 
-beforeEach(() => store.clearSignals());
+// Body size limit app (uses the same default as production: 100kb).
+const makeAppWithLimit = (limit = '100b') => {
+  const app = express();
+  app.use(express.json({ limit }));
+  app.use('/api/v1', router);
+  return app;
+};
+
+beforeEach(() => {
+  store.clearSignals();
+  writeLimiter.reset();
+});
 
 describe('POST /signals', () => {
   it('creates a signal and returns 201', async () => {
@@ -154,5 +166,182 @@ describe('GET /businesses/:id/breakdown', () => {
       kyc: 0,
     });
     expect(res.body.dominantType).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Body size limit integration tests
+// ---------------------------------------------------------------------------
+
+describe('Body size limit', () => {
+  it('rejects an oversized JSON body before business logic', async () => {
+    // Set a tiny limit: 100 bytes.
+    const app = makeAppWithLimit('100b');
+    // 200 bytes of JSON payload.
+    const bigPayload = { businessId: 1, signalType: 'payment', value: 42, padding: 'x'.repeat(200) };
+    const res = await request(app)
+      .post('/api/v1/signals')
+      .send(bigPayload);
+    expect(res.status).toBe(413);
+  });
+
+  it('accepts a body within the size limit', async () => {
+    const app = makeAppWithLimit('1kb');
+    const res = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 100 });
+    expect(res.status).toBe(201);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rate limiter integration tests
+// ---------------------------------------------------------------------------
+
+describe('Write rate limiting', () => {
+  it('allows normal verified traffic through', async () => {
+    const app = makeApp();
+    const res = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 100 });
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe(1);
+  });
+
+  it('sets rate limit headers on successful POST', async () => {
+    const app = makeApp();
+    const res = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 100 });
+    expect(res.headers['x-ratelimit-limit']).toBeDefined();
+    expect(res.headers['x-ratelimit-remaining']).toBeDefined();
+    expect(res.headers['x-ratelimit-reset']).toBeDefined();
+  });
+
+  it('returns 429 with retry metadata after exceeding the limit', async () => {
+    const app = makeApp();
+    // Exhaust the limit (default max = 30; send 31 requests).
+    for (let i = 0; i < 30; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app)
+        .post('/api/v1/signals')
+        .send({ businessId: 1, signalType: 'payment', value: i });
+    }
+
+    const res = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 999 });
+    expect(res.status).toBe(429);
+    expect(res.body.error).toBe('Too many requests');
+    expect(typeof res.body.retryAfter).toBe('number');
+    expect(res.body.retryAfter).toBeGreaterThan(0);
+    expect(typeof res.body.resetTime).toBe('string');
+    expect(res.headers['retry-after']).toBeDefined();
+  });
+
+  it('DELETE is also rate limited', async () => {
+    const app = makeApp();
+    // Create a signal first.
+    const created = await request(app)
+      .post('/api/v1/signals')
+      .send({ businessId: 1, signalType: 'payment', value: 100 });
+    const id = created.body.id;
+
+    // Exhaust the DELETE limiter.
+    for (let i = 0; i < 30; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app).delete(`/api/v1/signals/${id}`);
+    }
+
+    const res = await request(app).delete(`/api/v1/signals/${id}`);
+    expect(res.status).toBe(429);
+  });
+
+  it('GET routes are not affected by the write rate limiter', async () => {
+    const app = makeApp();
+    // Exhaust the write limiter.
+    for (let i = 0; i < 31; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app)
+        .post('/api/v1/signals')
+        .send({ businessId: 1, signalType: 'payment', value: i });
+    }
+
+    // GET should still work.
+    const res = await request(app).get('/api/v1/signals');
+    expect(res.status).toBe(200);
+    expect(res.body.signals).toBeDefined();
+  });
+
+  it('handles concurrent POST requests correctly', async () => {
+    const app = makeApp();
+    const count = 10;
+    const results = await Promise.all(
+      Array.from({ length: count }, (_, i) =>
+        request(app)
+          .post('/api/v1/signals')
+          .send({ businessId: 1, signalType: 'payment', value: i })
+      )
+    );
+
+    // All 10 should succeed since max is 30.
+    const okCount = results.filter((r) => r.status === 201).length;
+    expect(okCount).toBe(count);
+
+    // Rate limit headers should be present on each response.
+    for (const res of results) {
+      expect(res.headers['x-ratelimit-limit']).toBeDefined();
+      expect(res.headers['x-ratelimit-remaining']).toBeDefined();
+    }
+  });
+
+  it('blocks concurrent burst that exceeds the limit', async () => {
+    const app = makeApp();
+    const count = 35; // max is 30, so 5 should be blocked.
+    const results = await Promise.all(
+      Array.from({ length: count }, (_, i) =>
+        request(app)
+          .post('/api/v1/signals')
+          .send({ businessId: 1, signalType: 'payment', value: i })
+      )
+    );
+
+    const okCount = results.filter((r) => r.status === 201).length;
+    const blockedCount = results.filter((r) => r.status === 429).length;
+
+    expect(okCount).toBe(30);
+    expect(blockedCount).toBe(5);
+  });
+
+  it('keys rate limits by X-Forwarded-For when trust proxy is set', async () => {
+    const app = express();
+    app.set('trust proxy', 1);
+    app.use(express.json());
+    app.use('/api/v1', router);
+
+    writeLimiter.reset();
+
+    // Exhaust limit for forwarded IP "10.0.0.1".
+    for (let i = 0; i < 30; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await request(app)
+        .post('/api/v1/signals')
+        .set('X-Forwarded-For', '10.0.0.1')
+        .send({ businessId: 1, signalType: 'payment', value: i });
+    }
+
+    // IP "10.0.0.1" should now be blocked.
+    const blocked = await request(app)
+      .post('/api/v1/signals')
+      .set('X-Forwarded-For', '10.0.0.1')
+      .send({ businessId: 1, signalType: 'payment', value: 999 });
+    expect(blocked.status).toBe(429);
+
+    // IP "10.0.0.2" should still have quota.
+    const allowed = await request(app)
+      .post('/api/v1/signals')
+      .set('X-Forwarded-For', '10.0.0.2')
+      .send({ businessId: 2, signalType: 'payment', value: 100 });
+    expect(allowed.status).toBe(201);
   });
 });
