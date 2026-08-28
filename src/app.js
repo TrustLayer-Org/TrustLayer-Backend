@@ -21,17 +21,37 @@ app.get('/health', (req, res) => {
 });
 
 // TrustLayer API placeholder routes
-app.get('/api/v1/trust/verify/:businessId', (req, res) => {
-  const { businessId } = req.params;
-  res.json({
-    businessId,
-    score: 0,
-    message: 'Verification API – integrate with Stellar/Soroban',
-  });
+app.get('/api/:version/trust/verify/:businessId', (req, res, next) => {
+  const { version, businessId } = req.params;
+  
+  if (version === 'v1') {
+    return res.json({
+      businessId,
+      score: 0,
+      message: 'Verification API – integrate with Stellar/Soroban',
+    });
+  } else if (version === 'v2') {
+    return res.json({
+      businessId: parseInt(businessId, 10) || 0,
+      score: 0,
+      provenance: 'mock',
+      calculationVersion: 'v2.0',
+      freshness: new Date().toISOString(),
+      verificationStatus: 'mock'
+    });
+  }
+  
+  next();
 });
 
 // Trust Signals REST API
 app.use('/api/v1', signalsRouter);
+app.use('/api/v2', signalsRouter);
+
+// Catch unsupported API versions
+app.use('/api/:version', (req, res) => {
+  res.status(404).json({ error: 'unsupported version' });
+});
 
 if (require.main === module) {
   app.listen(PORT, () => {

@@ -79,14 +79,29 @@ router.get('/businesses/:id/breakdown', (req, res) => {
 });
 
 // Compute the trust score for a business from its signals.
-router.get('/businesses/:id/score', (req, res) => {
+router.get('/businesses/:id/score', (req, res, next) => {
   const businessId = Number(req.params.id);
   const signals = store.getSignalsByBusiness(businessId);
-  return res.json({
-    businessId,
-    score: scoreSignals(signals),
-    signalCount: signals.length,
-  });
+  
+  if (req.baseUrl === '/api/v1') {
+    return res.json({
+      businessId,
+      score: scoreSignals(signals),
+      signalCount: signals.length,
+    });
+  } else if (req.baseUrl === '/api/v2') {
+    return res.json({
+      businessId,
+      score: scoreSignals(signals),
+      signalCount: signals.length,
+      provenance: 'backend-computed',
+      calculationVersion: 'v2.0',
+      freshness: new Date().toISOString(),
+      verificationStatus: 'computed'
+    });
+  }
+  
+  next();
 });
 
 module.exports = router;
