@@ -125,7 +125,7 @@ describe('GET /businesses', () => {
 });
 
 describe('GET /businesses/:id/score', () => {
-  it('returns a computed trust score for a business', async () => {
+  it('returns a computed trust score for a business (v1)', async () => {
     const app = makeApp();
     await request(app)
       .post('/api/v1/signals')
@@ -134,6 +134,25 @@ describe('GET /businesses/:id/score', () => {
     expect(res.body.businessId).toBe(7);
     expect(res.body.score).toBe(90);
     expect(res.body.signalCount).toBe(1);
+    expect(res.body.provenance).toBeUndefined();
+  });
+
+  it('returns a computed trust score with provenance for a business (v2)', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/v2', router);
+
+    await request(app)
+      .post('/api/v2/signals')
+      .send({ businessId: 7, signalType: 'payment', value: 90 });
+    const res = await request(app).get('/api/v2/businesses/7/score');
+    expect(res.body.businessId).toBe(7);
+    expect(res.body.score).toBe(90);
+    expect(res.body.signalCount).toBe(1);
+    expect(res.body.provenance).toBe('backend-computed');
+    expect(res.body.calculationVersion).toBe('v2.0');
+    expect(typeof res.body.freshness).toBe('string');
+    expect(res.body.verificationStatus).toBe('computed');
   });
 });
 

@@ -113,7 +113,14 @@ the IP from the `X-Forwarded-For` chain only when `trust proxy` is enabled.
 ## API (current)
 
 - `GET /health` – Health check
-- `GET /api/v1/trust/verify/:businessId` – Trust verification placeholder
+
+### API Versioning
+
+The trust verification and score endpoints support versioned contracts to prevent ambiguous responses. The `v2` endpoints include source provenance, calculation version, data freshness, and verification status.
+
+- `/api/v1/*` – The legacy unversioned endpoints (returns basic score and message).
+- `/api/v2/*` – Versioned contracts with provenance data.
+- Unknown versions (e.g., `/api/v3/*`) return a `404 Not Found` with an `unsupported version` error.
 
 ### Trust Signals API
 
@@ -126,7 +133,12 @@ weighted average of a business's signals, clamped to `0..100`.
 - `GET /api/v1/signals` – List signals (`?businessId`, `?limit`, `?offset`)
 - `GET /api/v1/signals/:id` – Fetch a signal (`404` when missing)
 - `DELETE /api/v1/signals/:id` – Remove a signal (`404` when missing)
-- `GET /api/v1/businesses/:id/score` – Computed trust score for a business
+
+**Score Endpoints:**
+- `GET /api/v1/businesses/:id/score` – Computed trust score for a business (legacy format)
+- `GET /api/v2/businesses/:id/score` – Computed trust score with provenance contract
+- `GET /api/v1/trust/verify/:businessId` – Trust verification placeholder
+- `GET /api/v2/trust/verify/:businessId` – Explicit mock verification with provenance
 
 ### Business Directory API
 
