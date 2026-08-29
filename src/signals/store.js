@@ -1,5 +1,10 @@
-// In-memory store for trust signals.
+// In-memory store for trust signals and their idempotency bindings.
 // Not persistent; intended for development and tests.
+// Durability across process restart is tracked separately in issue #1;
+// idempotency records live in the same persistence boundary as signals
+// so a durable repository must commit both together atomically.
+
+const { resolveTtlMs } = require('./idempotency');
 
 const signals = [];
 let nextId = 1;

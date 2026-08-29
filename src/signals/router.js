@@ -3,6 +3,10 @@
 const express = require('express');
 const store = require('./store');
 const { validateSignal } = require('./validate');
+const {
+  fingerprintPayload,
+  validateIdempotencyKey,
+} = require('./idempotency');
 const { scoreSignals } = require('./score');
 const { listBusinessSummaries, sortBySummaryScoreDesc } = require('./directory');
 const { breakdownForBusiness } = require('./breakdown');
@@ -26,8 +30,37 @@ router.post('/signals', writeLimiter.middleware(true), (req, res) => {
   if (!valid) {
     return res.status(400).json({ errors });
   }
-  const record = store.addSignal(req.body);
-  return res.status(201).json(record);
+
+  const keyHeader = req.get('Idempotency-Key');
+  let key = null;
+  if (keyHeader !== undefined) {
+    const keyErrors = [];
+    validateIdempotencyKey(keyHeader, keyErrors);
+    if (keyErrors.length > 0) {
+      return res.status(400).json({ errors: keyErrors });
+    }
+    key = keyHeader;
+  }
+
+  const result = store.addSignalIdempotent(
+    req.body,
+    key === null
+      ? {}
+      : { key, fingerprint: fingerprintPayload(req.body) }
+  );
+
+  if (result.outcome === 'conflict') {
+    return res
+      .status(409)
+      .json({ error: 'idempotency key conflict', idempotencyKey: key });
+  }
+  if (result.outcome === 'replayed') {
+    return res
+      .set('Idempotency-Replayed', 'true')
+      .status(200)
+      .json(result.record);
+  }
+  return res.status(201).json(result.record);
 });
 
 // List stored signals, optionally filtered by businessId.

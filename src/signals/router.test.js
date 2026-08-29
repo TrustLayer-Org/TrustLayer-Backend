@@ -44,6 +44,152 @@ describe('POST /signals validation', () => {
   });
 });
 
+describe('POST /signals idempotency', () => {
+  it('creates on first request and replays the original record on exact retry', async () => {
+    const app = makeApp();
+    const first = await postSignal(app, PAYLOAD, 'relay-key-1');
+    expect(first.status).toBe(201);
+    expect(first.headers['idempotency-replayed']).toBeUndefined();
+
+    const retry = await postSignal(app, PAYLOAD, 'relay-key-1');
+    expect(retry.status).toBe(200);
+    expect(retry.headers['idempotency-replayed']).toBe('true');
+    expect(retry.body).toEqual(first.body);
+    expect(store.countSignals()).toBe(1);
+  });
+
+  it('keeps count and score unchanged across retries', async () => {
+    const app = makeApp();
+    await postSignal(app, PAYLOAD, 'relay-key-2');
+    await postSignal(app, PAYLOAD, 'relay-key-2');
+    await postSignal(app, PAYLOAD, 'relay-key-2');
+
+    const score = await request(app).get('/api/v1/businesses/1/score');
+    expect(score.body.signalCount).toBe(1);
+    expect(score.body.score).toBe(100);
+
+    const list = await request(app).get('/api/v1/signals');
+    expect(list.body.total).toBe(1);
+  });
+
+  it('rejects the same key with a different payload (409) and mutates nothing', async () => {
+    const app = makeApp();
+    const first = await postSignal(app, PAYLOAD, 'relay-key-3');
+
+    const conflict = await postSignal(
+      app,
+      { businessId: 1, signalType: 'payment', value: 999 },
+      'relay-key-3'
+    );
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.error).toBe('idempotency key conflict');
+    expect(store.countSignals()).toBe(1);
+
+    // Conflict must not change owner/binding/original response.
+    const replay = await postSignal(app, PAYLOAD, 'relay-key-3');
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(first.body);
+  });
+
+  it('rejects cross-business reuse of the same key', async () => {
+    const app = makeApp();
+    await postSignal(app, PAYLOAD, 'relay-key-4');
+
+    const conflict = await postSignal(
+      app,
+      { ...PAYLOAD, businessId: 2 },
+      'relay-key-4'
+    );
+    expect(conflict.status).toBe(409);
+    expect(store.getSignalsByBusiness(2)).toHaveLength(0);
+  });
+
+  it('does not burn the key when the first attempt is invalid', async () => {
+    const app = makeApp();
+    const invalid = await postSignal(
+      app,
+      { businessId: -5, signalType: 'payment', value: 100 },
+      'relay-key-5'
+    );
+    expect(invalid.status).toBe(400);
+
+    const corrected = await postSignal(app, PAYLOAD, 'relay-key-5');
+    expect(corrected.status).toBe(201);
+    expect(store.countSignals()).toBe(1);
+  });
+
+  it('rejects malformed keys with 400 before touching storage', async () => {
+    const app = makeApp();
+    const emptyKey = await request(app)
+      .post('/api/v1/signals')
+      .set('Idempotency-Key', '')
+      .send(PAYLOAD);
+    expect(emptyKey.status).toBe(400);
+
+    const longKey = await request(app)
+      .post('/api/v1/signals')
+      .set('Idempotency-Key', 'k'.repeat(256))
+      .send(PAYLOAD);
+    expect(longKey.status).toBe(400);
+    expect(store.countSignals()).toBe(0);
+  });
+
+  it('lets concurrent identical requests produce one winner and replays for the rest', async () => {
+    const app = makeApp();
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => postSignal(app, PAYLOAD, 'relay-race'))
+    );
+
+    const created = results.filter((res) => res.status === 201);
+    const replayed = results.filter((res) => res.status === 200);
+    expect(created).toHaveLength(1);
+    expect(replayed).toHaveLength(7);
+    expect(new Set(results.map((res) => res.body.id)).size).toBe(1);
+    expect(store.countSignals()).toBe(1);
+  });
+
+  it('keeps legacy duplicate behavior for requests without a key', async () => {
+    const app = makeApp();
+    const first = await postSignal(app, PAYLOAD);
+    const second = await postSignal(app, PAYLOAD);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body.id).toBe(first.body.id + 1);
+    expect(store.countSignals()).toBe(2);
+  });
+
+  it('replays a deterministic snapshot even after the original signal was deleted', async () => {
+    const app = makeApp();
+    const first = await postSignal(app, PAYLOAD, 'relay-key-6');
+    await request(app).delete(`/api/v1/signals/${first.body.id}`);
+
+    const retry = await postSignal(app, PAYLOAD, 'relay-key-6');
+    expect(retry.status).toBe(200);
+    expect(retry.body).toEqual(first.body);
+  });
+
+  it('treats an expired key as an explicitly new request per the retention policy', async () => {
+    process.env.TRUSTLAYER_IDEMPOTENCY_TTL_MS = '50';
+    jest.useFakeTimers({ now: 1_000_000 });
+    try {
+      const app = makeApp();
+      const first = await postSignal(app, PAYLOAD, 'relay-expired');
+      expect(first.status).toBe(201);
+
+      jest.setSystemTime(1_000_000 + 51);
+      const lateRetry = await postSignal(app, PAYLOAD, 'relay-expired');
+      // Documented policy: past TTL the binding is dropped and the key is
+      // reclaimable; the late retry becomes a NEW signal instead of an
+      // ambiguous stale replay.
+      expect(lateRetry.status).toBe(201);
+      expect(lateRetry.body.id).not.toBe(first.body.id);
+      expect(store.countSignals()).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('GET /signals', () => {
   it('lists and paginates signals', async () => {
     const app = makeApp();

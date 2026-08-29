@@ -1,6 +1,12 @@
 const store = require('./store');
+const { fingerprintPayload } = require('./idempotency');
 
-beforeEach(() => store.clearSignals());
+const PAYLOAD = { businessId: 1, signalType: 'payment', value: 100 };
+
+beforeEach(() => {
+  store.clearSignals();
+  delete process.env.TRUSTLAYER_IDEMPOTENCY_TTL_MS;
+});
 
 describe('signal store', () => {
   it('addSignal stores a record with a generated id', () => {
