@@ -4,6 +4,12 @@
 const signals = [];
 let nextId = 1;
 
+// Append-only audit log for deleted signals.
+// Each entry is a tombstone: { deletionId, signalId, businessId, signalType, deletedAt }.
+// Deliberately omits `value` to avoid leaking sensitive score data.
+const deletionLog = [];
+let nextDeletionId = 1;
+
 // Store a signal, assigning it a generated id, and return the stored record.
 module.exports.addSignal = (signal) => {
   const record = { id: nextId, ...signal };
@@ -23,21 +29,42 @@ module.exports.getSignalById = (id) =>
 module.exports.getSignalsByBusiness = (businessId) =>
   signals.filter((signal) => signal.businessId === businessId);
 
-// Remove a signal by id; returns true when something was removed.
+// Remove a signal by id; returns the removed record or null when not found.
+// Appends a tombstone to the deletion log on success for audit/reconciliation.
 module.exports.removeSignal = (id) => {
   const index = signals.findIndex((signal) => signal.id === id);
   if (index === -1) {
-    return false;
+    return null;
   }
-  signals.splice(index, 1);
-  return true;
+  const [removed] = signals.splice(index, 1);
+  const tombstone = {
+    deletionId: nextDeletionId,
+    signalId: removed.id,
+    businessId: removed.businessId,
+    signalType: removed.signalType,
+    deletedAt: new Date().toISOString(),
+  };
+  nextDeletionId += 1;
+  deletionLog.push(tombstone);
+  return removed;
 };
 
 // Reset the store to its initial state. Intended for use in tests.
 module.exports.clearSignals = () => {
   signals.length = 0;
   nextId = 1;
+  deletionLog.length = 0;
+  nextDeletionId = 1;
 };
 
 // Return the number of stored signals.
 module.exports.countSignals = () => signals.length;
+
+// Return a shallow copy of the deletion audit log.
+module.exports.getDeletionLog = () => deletionLog.slice();
+
+// Clear only the deletion log. Intended for use in tests.
+module.exports.clearDeletionLog = () => {
+  deletionLog.length = 0;
+  nextDeletionId = 1;
+};

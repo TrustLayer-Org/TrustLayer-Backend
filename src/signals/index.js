@@ -7,5 +7,6 @@ module.exports = {
   score: require('./score'),
   directory: require('./directory'),
   breakdown: require('./breakdown'),
+  reconcile: require('./reconcile'),
   router: require('./router'),
 };

@@ -60,6 +60,9 @@ router.delete('/signals/:id', writeLimiter.middleware(true), (req, res) => {
   if (!removed) {
     return res.status(404).json({ error: 'signal not found' });
   }
+  res.set('X-Deleted-Signal-Id', String(removed.id));
+  res.set('X-Affected-Business-Id', String(removed.businessId));
+  res.set('X-Deletion-Timestamp', new Date().toISOString());
   return res.status(204).end();
 });
 
