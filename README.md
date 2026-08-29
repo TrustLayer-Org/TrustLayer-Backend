@@ -5,9 +5,10 @@ Express API for the TrustLayer platform: health checks and placeholder routes fo
 ## What’s in this repo
 
 - **Express app** – `src/app.js` with `/health` and `/api/v1/*` placeholders
+- **Durable repository** – SQLite-based persistence for trust signals with schema validation and migrations
 - **Business directory** – `GET /api/v1/businesses` summarizing signal count and score per business
 - **Signal breakdown** – `GET /api/v1/businesses/:id/breakdown` with per-type signal counts
-- **Tests** – Jest + supertest in `src/app.test.js`
+- **Tests** – Jest + supertest in `src/app.test.js` with isolated test databases
 - **CI** – Install, build, and test on push/PR to `main`
 
 ## Prerequisites
@@ -33,6 +34,8 @@ npm run build
 # Start server (default port 3001)
 npm start
 ```
+
+The server will create a `data/signals.db` SQLite database on first startup. You can customize the database path using the `DB_PATH` environment variable.
 
 ## Scripts
 

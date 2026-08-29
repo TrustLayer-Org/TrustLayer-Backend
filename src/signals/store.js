@@ -6,8 +6,21 @@
 
 const { resolveTtlMs } = require('./idempotency');
 
-const signals = [];
-let nextId = 1;
+const repository = require('./repository');
+const path = require('path');
+
+// Initialize repository with default path if not already initialized
+let initialized = false;
+let initDbPath = null;
+
+function ensureInitialized() {
+  if (!initialized) {
+    const defaultPath = path.join(process.cwd(), 'data', 'signals.db');
+    repository.initialize(defaultPath);
+    initialized = true;
+    initDbPath = defaultPath;
+  }
+}
 
 // Append-only audit log for deleted signals.
 // Each entry is a tombstone: { deletionId, signalId, businessId, signalType, deletedAt }.
@@ -17,22 +30,27 @@ let nextDeletionId = 1;
 
 // Store a signal, assigning it a generated id, and return the stored record.
 module.exports.addSignal = (signal) => {
-  const record = { id: nextId, ...signal };
-  nextId += 1;
-  signals.push(record);
-  return record;
+  ensureInitialized();
+  return repository.addSignal(signal);
 };
 
 // Return a shallow copy of all stored signals.
-module.exports.getAllSignals = () => signals.slice();
+module.exports.getAllSignals = () => {
+  ensureInitialized();
+  return repository.getAllSignals();
+};
 
 // Find a single signal by its id, or undefined when not present.
-module.exports.getSignalById = (id) =>
-  signals.find((signal) => signal.id === id);
+module.exports.getSignalById = (id) => {
+  ensureInitialized();
+  return repository.getSignalById(id);
+};
 
 // Return all signals belonging to a given business id.
-module.exports.getSignalsByBusiness = (businessId) =>
-  signals.filter((signal) => signal.businessId === businessId);
+module.exports.getSignalsByBusiness = (businessId) => {
+  ensureInitialized();
+  return repository.getSignalsByBusiness(businessId);
+};
 
 // Remove a signal by id; returns the removed record or null when not found.
 // Appends a tombstone to the deletion log on success for audit/reconciliation.
