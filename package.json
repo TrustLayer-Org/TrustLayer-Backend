@@ -4,9 +4,9 @@
   "description": "TrustLayer API gateway and services (Express)",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node init && node src/app.js",
     "test": "NODE_ENV=test jest",
-    "build": "node -e \"require('./src/app')\""
+    "build": "node init && node -e \"require('./src/app')\""
   },
   "keywords": [],
   "author": "",
