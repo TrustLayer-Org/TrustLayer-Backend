@@ -1,5 +1,4 @@
 node_modules/
-.env
 *.log
 .DS_Store
 data/
@@ -7,3 +6,4 @@ data/
 *.db-shm
 *.db-wal
 test-data/
+config.bat
